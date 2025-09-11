@@ -23,9 +23,9 @@ jobs:
       - name: Build and push backend Docker image
         run: |
           docker build -t aicha36/backend ./QuizzApp
-          docker push yourdockerhubusername/backend
+          docker push aicha36/backend
 
       - name: Build and push frontend Docker image
         run: |
           docker build -t aicha36/frontend ./quizzapp-frontend
-          docker push yourdockerhubusername/frontend
+          docker push aicha36/frontend
