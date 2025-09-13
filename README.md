@@ -1,10 +1,10 @@
-# 📝 QuizzApp
+# QuizzApp
 
 QuizzApp is a **web application** designed to create, take, and manage quizzes easily. 
 
 ---
 
-## 🚧 Work in Progress
+## Work in Progress
 This project is **still under development**. Planned improvements include:  
 
 ### Planned Features & Improvements
@@ -16,7 +16,7 @@ This project is **still under development**. Planned improvements include:
 - **Additional functionalities:** Performance improvements, bug fixes, and overall UX enhancements  
 ---
 
-## 💻 Tech Stack
+## Tech Stack
 - **Frontend:** React JS 
 - **Backend:** Spring Boot, Spring Security 
 - **Database:** PostgreSQL  
@@ -24,7 +24,7 @@ This project is **still under development**. Planned improvements include:
 
 ---
 
-## ⚡ Features (current)
+## Features (current)
 - Access restricted to registered and verified users
 - Create and manage quizzes  
 - Answer quizzes and view results  
