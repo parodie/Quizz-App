@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Converter
@@ -25,8 +26,9 @@ public class JsonConverter implements AttributeConverter<List<String>, String> {
     @Override
     public List<String> convertToEntityAttribute(String dbData) {
         if (dbData == null || dbData.isEmpty()) {
-            return null;
+            return new ArrayList<>();
         }
+
         try {
             return objectMapper.readValue(dbData, List.class);
         } catch (IOException e) {

@@ -10,7 +10,6 @@ import java.util.List;
 
 @Entity
 @Table(name = "quizzes")
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -28,11 +27,10 @@ public class Quiz {
 
     @Column(nullable = false)
     @Builder.Default
-    private boolean isPublic = true;
-
-    @Column(nullable = false)
-    @Builder.Default
     private boolean requiresAuth = false;
+
+    @Column(unique = true)
+    private String shareToken;
 
     @ManyToOne
     @JoinColumn(name = "created_by", nullable = false)

@@ -4,13 +4,16 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "responses")
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Getter
+@Setter
 public class Response {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,6 +26,10 @@ public class Response {
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user; // null if anonymous
+
+    @OneToMany(mappedBy = "response", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Answer> answers = new ArrayList<>();
 
     @Column(name = "display_name", nullable = false)
     private String displayName;

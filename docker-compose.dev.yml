@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: quiz
+      POSTGRES_PASSWORD: quiz123
+      POSTGRES_DB: quizdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    image: eclipse-temurin:17-jdk-alpine
+    working_dir: /app
+    command: ./mvnw spring-boot:run
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./QuizzApp/.env
+    volumes:
+      - ./QuizzApp:/app
+      - ~/.m2:/root/.m2   # speeds up Maven downloads
+    depends_on:
+      - db
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    command: npx vite --host 0.0.0.0
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./quizzapp-frontend:/app
+      - node_modules:/app/node_modules
+    depends_on:
+      - backend
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
+  node_modules:

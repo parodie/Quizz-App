@@ -1,18 +1,18 @@
 package org.example.quizzapp.service;
 
 import lombok.RequiredArgsConstructor;
+import org.example.quizzapp.Exception.*;
 import org.example.quizzapp.dto.*;
 import org.example.quizzapp.model.*;
-import org.example.quizzapp.repositories.QuestionRepository;
-import org.example.quizzapp.repositories.QuizRepository;
-import org.example.quizzapp.repositories.ResponseRepository;
-import org.example.quizzapp.repositories.UserRepository;
+import org.example.quizzapp.repositories.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 @RequiredArgsConstructor
@@ -22,15 +22,17 @@ public class QuizService {
     private final QuestionRepository questionRepository;
     private final ResponseRepository responseRepository;
     private final UserRepository userRepository;
+    private final AnswerRepository answerRepository;
+
+    private static final Logger log = LoggerFactory.getLogger(QuizService.class);
 
     public Quiz createQuiz(CreateQuizDTO dto, String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException(email));
 
         Quiz quizz = Quiz.builder()
                 .title(dto.getTitle())
                 .description(dto.getDescription())
-                .isPublic(dto.isPublic())
                 .createdBy(user)
                 .createdAt(LocalDateTime.now())
                 .passingScore(dto.getPassingScore() != null ? dto.getPassingScore() : 60)
@@ -44,11 +46,11 @@ public class QuizService {
                 .map(q -> Question.builder()
                         .text(q.getText())
                         .options(q.getOptions())
-                        .correctAnswer(q.getCorrectAnswer())
+                        .correctAnswers(q.getCorrectAnswers())
                         .question_type(q.getQuestion_type())
                         .quiz(finalQuizz)
                         .build())
-                .collect(Collectors.toList());
+                .toList();
 
         questionRepository.saveAll(questions);
 
@@ -56,9 +58,9 @@ public class QuizService {
     }
 
     public Quiz getQuizById(Long id, String userEmail) {
-        Optional<Quiz> publicQuiz = quizRepository.findPublicQuizById(id);
-        if (publicQuiz.isPresent()) {
-            return publicQuiz.get();
+        Optional<Quiz> Quiz = quizRepository.findById(id);
+        if (Quiz.isPresent()) {
+            return Quiz.get();
         }
 
         User user = userRepository.findByEmail(userEmail)
@@ -66,21 +68,17 @@ public class QuizService {
 
         if (user != null) {
             return quizRepository.findByIdAndCreatedBy(id, user)
-                    .orElseThrow(() -> new RuntimeException("Quiz not found or access denied"));
+                    .orElseThrow(() -> new QuizNotFoundOrAccessDenied(id));
         }
 
-        throw new RuntimeException("Quiz not found or access denied");
+        throw new QuizNotFoundOrAccessDenied(id);
     }
 
     public List<QuizDTO> getMyQuizzes(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException(email));
 
         List<Quiz> quizzes = quizRepository.findByCreatedBy(user);
-
-        if (quizzes.isEmpty()) {
-            throw new RuntimeException("No quizzes found for this user");
-        }
 
         return quizzes.stream().map(quiz -> {
             List<QuestionDTO> questionDTOs = quiz.getQuestions().stream()
@@ -89,34 +87,32 @@ public class QuizService {
                             q.getText(),
                             q.getOptions(),
                             q.getQuestion_type(),
-                            q.getCorrectAnswer()
+                            q.getCorrectAnswers()
                     ))
-                    .collect(Collectors.toList());
+                    .toList();
 
             return new QuizDTO(
                     quiz.getId(),
                     quiz.getTitle(),
                     quiz.getDescription(),
-                    quiz.isPublic(),
                     quiz.isRequiresAuth(),
                     quiz.getCreatedBy().getEmail(),
                     quiz.getCreatedAt(),
                     quiz.getPassingScore(),
                     questionDTOs
             );
-        }).collect(Collectors.toList());
+        }).toList();
 
     }
 
     @Transactional
     public Quiz updateQuiz(Long id, UpdateQuizDTO dto, String email) {
         Quiz quiz = quizRepository.findByIdAndCreatedBy(id, getUser(email))
-                .orElseThrow(() -> new RuntimeException("Quiz not found or not authorized"));
+                .orElseThrow(() -> new QuizNotFoundOrAccessDenied(id));
 
         //update quiz metadata
         if (dto.getTitle() != null) quiz.setTitle(dto.getTitle());
         if (dto.getDescription() != null) quiz.setDescription(dto.getDescription());
-        quiz.setPublic(dto.isPublic());
         if (dto.getPassingScore() != null) quiz.setPassingScore(dto.getPassingScore());
 
         quiz = quizRepository.save(quiz);
@@ -145,7 +141,7 @@ public class QuizService {
                     Question newQuestion = Question.builder()
                             .text(dtoQuestion.getText())
                             .options(dtoQuestion.getOptions())
-                            .correctAnswer(dtoQuestion.getCorrectAnswer())
+                            .correctAnswers(dtoQuestion.getCorrectAnswers())
                             .question_type(dtoQuestion.getQuestion_type())
                             .quiz(quiz)
                             .build();
@@ -156,7 +152,7 @@ public class QuizService {
 
         List<Question> toDelete = existingQuestions.stream()
                 .filter(q -> !questionsToKeep.contains(q.getId()))
-                .collect(Collectors.toList());
+                .toList();
 
         if (!toDelete.isEmpty()) {
             questionRepository.deleteAll(toDelete);
@@ -168,24 +164,24 @@ public class QuizService {
     private void updateQuestionFromDTO(Question question, QuestionDTO dto) {
         question.setText(dto.getText());
         question.setOptions(dto.getOptions());
-        question.setCorrectAnswer(dto.getCorrectAnswer());
+        question.setCorrectAnswers(dto.getCorrectAnswers());
         question.setQuestion_type(dto.getQuestion_type());
     }
 
     public void deleteQuiz(Long id, String email) {
         Quiz quiz = quizRepository.findByIdAndCreatedBy(id, getUser(email))
-                .orElseThrow(() -> new RuntimeException("Quiz not found or not authorized"));
+                .orElseThrow(() -> new QuizNotFoundOrAccessDenied(id));
         quizRepository.delete(quiz);
     }
 
+    @Transactional   //because we are saving many entites either save all or if fails retract everything
     public SubmissionResult submitQuiz(Long quizId,
                                        QuizSubmissionDTO submission,
                                        String authenticatedEmail) {
 
         Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new RuntimeException("Quiz not found"));
+                .orElseThrow(() -> new QuizNotFoundException(quizId));
 
-        // Get user if logged in
         User user = null;
         String displayName = submission.getDisplayName();
 
@@ -200,67 +196,84 @@ public class QuizService {
         } else {
             // Guest must provide display name
             if (displayName == null || displayName.trim().isEmpty()) {
-                throw new RuntimeException("Display name is required for guests");
+                throw new DisplayNameRequiredException();
             }
         }
 
-        // Validate answers
-        List<Answer> answers = submission.getAnswers().stream()
-                .map(dto -> {
-                    Question question = questionRepository.findById(dto.getQuestionId())
-                            .orElseThrow(() -> new RuntimeException("Question not found"));
-
-
-
-
-                    return Answer.builder()
-                            .question(question)
-                            .selectedAnswer(dto.getSelectedAnswer())
-                            .build();
-                })
-                .collect(Collectors.toList());
-
-        // Calculate score
-        int correctAnswers = 0;
-        for (Answer answer : answers) {
-            if (answer.isCorrect()) {
-                correctAnswers++;
-            }
-        }
-
-        int totalQuestions = answers.size();
-        int score = totalQuestions > 0 ? (correctAnswers * 100) / totalQuestions : 0;
-
-        // Save response
         Response response = Response.builder()
                 .quiz(quiz)
                 .user(user)
                 .displayName(displayName)
-                .totalQuestions(totalQuestions)
-                .correctAnswers(correctAnswers)
-                .score(score)
-                .timeTakenSeconds(submission.getTimeTaken()) // if sent from frontend
+                .timeTakenSeconds(submission.getTimeTaken())
                 .build();
 
         responseRepository.save(response);
+
+
+        // Validate answers
+        List<Answer> answers = submission.getAnswers().stream()
+                .map(dto -> {
+
+                    //get the question
+                    Question question = questionRepository.findById(dto.getQuestionId())
+                            .orElseThrow(() -> new QuizNotFoundException(quizId));
+
+                    //get selected answers
+                    List<String> selected = dto.getSelectedAnswers() != null ? dto.getSelectedAnswers() : new ArrayList<>();
+
+                    //validate selected answers if they exist
+                    for(String ans: selected){
+                        if(!question.getOptions().contains(ans)){
+                            throw new InvalidOptionsException(ans);
+                        }
+                    }
+
+                    //compute correct answers
+                    boolean correct = isCorrectAnswer(selected, question);
+
+                    return Answer.builder()
+                            .question(question)
+                            .selectedAnswers(dto.getSelectedAnswers() != null ? dto.getSelectedAnswers() : new ArrayList<>())
+                            .response(response)
+                            .isCorrect(correct)
+                            .build();
+                })
+                .toList();
+
+        answerRepository.saveAll(answers);
+
+        // Calculate score
+        int correctAnswers = (int) answers.stream().filter(Answer::isCorrect).count();
+        int totalQuestions = answers.size();
+        int score = totalQuestions > 0 ? (correctAnswers * 100) / totalQuestions : 0;
+
+        //persist response results to db
+        response.setTotalQuestions(totalQuestions);
+        response.setCorrectAnswers(correctAnswers);
+        response.setScore(score);
+        responseRepository.save(response);
+
+        //Debugging
+        log.info("Quiz {} submitted by {} - Score: {}/{}", quizId, displayName, correctAnswers, totalQuestions);
 
         return SubmissionResult.builder()
                 .score(score)
                 .correctAnswers(correctAnswers)
                 .totalQuestions(totalQuestions)
-                .passed(score >= quiz.getPassingScore()) // assume Quiz has passingScore field
+                .passed(score >= quiz.getPassingScore())
                 .build();
     }
 
+    //helper method
     private User getUser(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException(email));
     }
 
     public QuizAnalytics getQuizAnalytics(Long quizId, String ownerEmail) {
         // 1. Verify quiz exists and user is owner
         Quiz quiz = quizRepository.findByIdAndCreatedBy(quizId, getUser(ownerEmail))
-                .orElseThrow(() -> new RuntimeException("Quiz not found or access denied"));
+                .orElseThrow(() -> new QuizNotFoundOrAccessDenied(quizId));
 
         // 2. Get all responses for this quiz
         List<Response> responses = responseRepository.findByQuiz(quiz);
@@ -302,6 +315,119 @@ public class QuizService {
                 .passRate(Math.round(passRate * 100.0) / 100.0)
                 .averageTimeSeconds(Math.round(avgTime))
                 .build();
+    }
+
+    @Transactional(readOnly=true)
+    public ResponseDTO getResponseDetail(Long responseId, String ownerEmail) {
+        // 1. Verify ownership
+        Response response = responseRepository.findById(responseId)
+                .orElseThrow(() -> new ResponseNotFoundException(responseId));
+
+        Quiz quiz = response.getQuiz();
+
+        if (quiz == null) {
+            throw new InvalidOrExpiredLinkException();
+        }
+
+        if (!quiz.getCreatedBy().getEmail().equals(ownerEmail)) {
+            throw new NotAuthorizedToGetResourceException();
+        }
+
+        // 2. Build DTO
+        ResponseDTO dto = ResponseDTO.builder()
+                .id(response.getId())
+                .displayName(response.getDisplayName())
+                .submittedAt(response.getSubmittedAt())
+                .score(response.getScore())
+                .build();
+
+        List<AnswerDTO> answerDetails = response.getAnswers().stream()
+                .map(answer -> {
+                    Question question = answer.getQuestion();
+
+                return AnswerDTO.builder()
+                        .questionId(question.getId())
+                        .questionText(question.getText())
+                        .selectedAnswers(answer.getSelectedAnswers())
+                        .correctAnswers(question.getCorrectAnswers())
+                        .isCorrect(answer.isCorrect())
+                        .build();
+
+
+
+                })
+                .toList();
+
+        dto.setAnswers(answerDetails);
+        return dto;
+    }
+
+    @Transactional(readOnly=true)
+    public List<ResponseSummaryDTO> getResponses(Long quizId, String ownerEmail){
+        // 1. Verify ownership
+        Quiz quiz = quizRepository.findByIdAndCreatedBy(quizId, getUser(ownerEmail))
+                .orElseThrow(() -> new QuizNotFoundOrAccessDenied(quizId));
+
+        // 2. Fetch responses
+        List<Response> responses = responseRepository.findByQuiz(quiz);
+
+        return responses.stream().map(response -> ResponseSummaryDTO.builder()
+                .id(response.getId())
+                .displayName(response.getDisplayName())
+                .score(response.getScore())
+                .submittedAt(response.getSubmittedAt())
+                .build()).toList();
+    }
+
+    //generate the token for sharing quiz links for guests to be able to pass the quiz
+    public String createOrRefreshShareToken(Long quizId, String ownerEmail) {
+        Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> new QuizNotFoundException(quizId));
+
+        //check if the ownner is the one creating the sharing link
+        if(!quiz.getCreatedBy().getEmail().equals(ownerEmail)) {
+            throw new NotAuthorizedToGetResourceException();
+        }
+
+        //32 characters 128-bit entropy (very secure)
+        String newToken = UUID.randomUUID().toString().replace("-","");
+        quiz.setShareToken(newToken);
+        quizRepository.save(quiz);
+        return newToken;
+    }
+
+    public void revokeShareToken(Long quizId, String ownerEmail){
+        Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> new QuizNotFoundException(quizId));
+
+        //check if the ownner is the one revoking/deleting the sharing link
+        if(!quiz.getCreatedBy().getEmail().equals(ownerEmail)) {
+            throw new NotAuthorizedToGetResourceException();
+        }
+
+        quiz.setShareToken(null);
+        quizRepository.save(quiz);
+    }
+
+    public Quiz getSharedQuiz(String shareToken){
+        return quizRepository.findByShareToken(shareToken)
+                .orElseThrow(InvalidOrExpiredLinkException::new);
+    }
+
+
+    //helper method for submitQuiz
+    private boolean isCorrectAnswer(List<String> selected, Question question) {
+        if (selected == null || selected.isEmpty() || question.getCorrectAnswers() == null) {
+            return false;
+        }
+
+        Set<String> submitted = selected.stream()
+                .map(s -> s.trim().toLowerCase())
+                .collect(Collectors.toSet());
+
+        Set<String> correct = question.getCorrectAnswers().stream()
+                .map(s -> s.trim().toLowerCase())
+                .collect(Collectors.toSet());
+
+        return submitted.equals(correct);
     }
 
 

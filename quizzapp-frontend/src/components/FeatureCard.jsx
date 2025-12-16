@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import './FeatureCard.css';
+import '../styles/FeatureCard.css';
 
 export default function FeatureCard({ icon, title, description, delay = 0 }) {
   const [isVisible, setIsVisible] = useState(false);

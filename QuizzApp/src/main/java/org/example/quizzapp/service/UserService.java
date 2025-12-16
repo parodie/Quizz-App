@@ -1,6 +1,9 @@
 package org.example.quizzapp.service;
 
 import lombok.RequiredArgsConstructor;
+import org.example.quizzapp.Exception.EmailAlreadyInUseException;
+import org.example.quizzapp.Exception.InvalidCredentialsException;
+import org.example.quizzapp.Exception.UnverifiedEmailException;
 import org.example.quizzapp.config.JwtUtil;
 import org.example.quizzapp.dto.LoginResponse;
 import org.example.quizzapp.model.User;
@@ -25,7 +28,7 @@ public class UserService {
     // Register user + send verification email
     public void register(String email, String password) {
         if (userRepository.findByEmail(email).isPresent()) {
-            throw new RuntimeException("Email already in use");
+            throw new EmailAlreadyInUseException(email);
         }
 
         User user = User.builder()
@@ -53,14 +56,14 @@ public class UserService {
     // Login: only if verified
     public LoginResponse login(String email, String password) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Invalid credentials"));
+                .orElseThrow(InvalidCredentialsException::new);
 
         if (!user.isEnabled()) {
-            throw new RuntimeException("Please verify your email first");
+            throw new UnverifiedEmailException();
         }
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new RuntimeException("Invalid credentials");
+            throw new InvalidCredentialsException();
         }
 
         String token = jwtUtil.generateToken(email);

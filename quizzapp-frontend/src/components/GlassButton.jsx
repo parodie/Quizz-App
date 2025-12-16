@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import './GlassButton.css';
+import '../styles/GlassButton.css';
 
 export default function GlassButton({ children, onClick, variant = 'outline', size = 'normal' }) {
   const [isHovered, setIsHovered] = useState(false);

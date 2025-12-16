@@ -1,13 +1,25 @@
 package org.example.quizzapp.dto;
 
-import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
+import jakarta.persistence.Convert;
+import lombok.*;
+import org.example.quizzapp.config.JsonConverter;
 
-@Data
+import java.util.List;
+
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class AnswerDTO {
     private Long questionId;
-    private String selectedAnswer;
+
+    @Convert(converter = JsonConverter.class)
+    private List<String> selectedAnswers;
+
+    private String questionText;
+
+    private List<String> correctAnswers;
+
+    private boolean isCorrect;
 }

@@ -11,6 +11,8 @@ import Results from './pages/Results';
 import VerifyEmail from './pages/VerifyEmail';
 import LandingPage from './pages/LandingPage';
 import EditQuiz from './pages/EditQuiz';
+import TakeSharedQuiz from './pages/TakeSharedQuiz';
+import SharedQuiz from './pages/SharedQuiz';
 import './styles/Global.css';
 
 function App() {
@@ -27,6 +29,8 @@ function App() {
                     <Route path="/quiz/:id/take" element={<TakeQuiz />} />
                     <Route path="/quiz/:id" element={<PrivateRoute><EditQuiz /></PrivateRoute>} />
                     <Route path="/quiz/:id/results" element={<PrivateRoute><Results /></PrivateRoute>} />
+                    <Route path="/shared/:shareToken" element={<SharedQuiz />} />
+                    <Route path="/shared/:shareToken/take" element={<TakeSharedQuiz />} />
                 </Routes>
             </Router>
         </AuthProvider>

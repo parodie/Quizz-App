@@ -1,20 +1,20 @@
 package org.example.quizzapp.dto;
 
+import jakarta.persistence.Convert;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.example.quizzapp.config.JsonConverter;
 import org.example.quizzapp.model.enums.QuestionType;
-
 import java.util.List;
 
-@Data
-@Builder
-@AllArgsConstructor
+@Getter
+@Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class QuestionDTO {
     private Long id;
 
@@ -29,7 +29,8 @@ public class QuestionDTO {
     @NotNull(message = "Question type is required")
     private QuestionType question_type;
 
-    @NotBlank(message = "Correct answers are required")
-    private String correctAnswer;
+    @NotEmpty(message = "Correct answers are required")
+    @Convert(converter = JsonConverter.class)
+    private List<String> correctAnswers;
 }
 

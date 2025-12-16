@@ -75,21 +75,6 @@
   gap: 0.8rem;
 }
 
-.optionLabel {
-  display: flex;
-  align-items: center;
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
-  background-color: #f9f9f9;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid #e0e0e0;
-}
-
-.optionLabel:hover {
-  background-color: #ecf0f1;
-  border-color: #3498db;
-}
 
 .radioInput {
   margin-right: 0.75rem;
@@ -136,5 +121,137 @@
   }
   .timer {
     font-size: 1.1rem;
+  }
+}
+
+/* Make entire option area clickable */
+.optionLabel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  margin: 8px 0;
+  border: 2px solid var(--light-gray);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.optionLabel:hover {
+  border-color: var(--primary);
+  background-color: rgba(67, 97, 238, 0.08);
+}
+
+/* Visual feedback for selected answers */
+.optionLabel.selected {
+  border-color: var(--success);
+  background-color: rgba(74, 222, 128, 0.15);
+}
+
+/* Hide native inputs but keep them functional */
+.checkboxInput, .radioInput {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 100%;
+  width: 100%;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+/* Custom radio/checkbox indicator */
+.optionLabel::before {
+  content: '';
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--gray);
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.optionLabel.selected::before {
+  border-color: var(--success);
+  background-color: var(--success);
+}
+
+/* Checkbox style for multiple choice */
+.optionLabel[data-type="multiple"]::before {
+  border-radius: 4px;
+}
+
+.optionLabel[data-type="multiple"].selected::before {
+  background-color: var(--success);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23fff' d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+  background-size: 16px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+
+/* Shared Quiz Specific Styles */
+.shared-description {
+  color: var(--primary);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.shared-description::before {
+  content: '🔗';
+}
+
+/* Loading spinner */
+.loading-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(67, 97, 238, 0.2);
+  border-top: 3px solid var(--primary);
+  border-radius: 50%;
+  margin: 0 auto 1rem;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error card styling */
+.error-card {
+  text-align: center;
+  padding: 2rem;
+}
+
+.error-title {
+  color: var(--danger);
+  margin-bottom: 1rem;
+  font-size: 1.8rem;
+}
+
+.error-message {
+  color: var(--gray);
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .timer {
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+  }
+  
+  .questionTitle {
+    font-size: 1.1rem;
+  }
+  
+  .submitBtn {
+    width: 100%;
   }
 }

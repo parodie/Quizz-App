@@ -9,11 +9,11 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class QuizDTO {
     private Long id;
     private String title;
     private String description;
-    private boolean isPublic;
     private boolean requiresAuth;
     private String createdByEmail;
     private LocalDateTime createdAt;

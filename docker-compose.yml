@@ -32,3 +32,15 @@ services:
       timeout: 10s
       retries: 5
       start_period: 40s
+
+  db:
+    image: postgres:15
+    container_name: quiz-db
+    environment:
+      POSTGRES_USER: quiz
+      POSTGRES_PASSWORD: quiz123
+      POSTGRES_DB: quizdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data

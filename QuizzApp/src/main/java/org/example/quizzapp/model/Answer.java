@@ -1,17 +1,18 @@
 package org.example.quizzapp.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.example.quizzapp.config.JsonConverter;
+import java.util.List;
+
 
 @Entity
 @Table(name = "answers")
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Getter
+@Setter
 public class Answer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,13 +26,12 @@ public class Answer {
     @JoinColumn(name = "question_id", nullable = false)
     private Question question;
 
-    private String selectedAnswer;
+    @Convert(converter = JsonConverter.class)
+    @Column(name = "selected_answers")
+    private List<String> selectedAnswers;
+
 
     private boolean isCorrect;
 
-    public boolean isCorrect() {
-        return question != null
-                && selectedAnswer != null
-                && selectedAnswer.trim().equalsIgnoreCase(question.getCorrectAnswer());
-    }
+
 }

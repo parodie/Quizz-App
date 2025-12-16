@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/quizzes")
@@ -35,58 +36,96 @@ public class QuizController {
         return ResponseEntity.ok(quizzesDto);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/my/{quizId}")
     public ResponseEntity<Quiz> getQuiz(
-            @PathVariable Long id,
+            @PathVariable Long quizId,
             Authentication authentication) {
 
         String email = authentication != null ? authentication.getName() : null;
-        Quiz quiz = quizService.getQuizById(id, email);
+        Quiz quiz = quizService.getQuizById(quizId, email);
         return ResponseEntity.ok(quiz);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{quizId}")
     public ResponseEntity<Quiz> updateQuiz(
-            @PathVariable Long id,
+            @PathVariable Long quizId,
             @RequestBody @Valid UpdateQuizDTO dto,
             Authentication authentication) {
 
         String email = authentication.getName();
-        Quiz quiz = quizService.updateQuiz(id, dto, email);
+        Quiz quiz = quizService.updateQuiz(quizId, dto, email);
         return ResponseEntity.ok(quiz);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{quizId}")
     public ResponseEntity<Void> deleteQuiz(
-            @PathVariable Long id,
+            @PathVariable Long quizId,
             Authentication authentication) {
 
         String email = authentication.getName();
-        quizService.deleteQuiz(id, email);
+        quizService.deleteQuiz(quizId, email);
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/{id}/results")
+    @GetMapping("/{quizId}/results")
     public ResponseEntity<QuizAnalytics> getQuizAnalytics(
-            @PathVariable Long id,
+            @PathVariable Long quizId,
             Authentication authentication) {
 
         String email = authentication.getName();
-        QuizAnalytics analytics = quizService.getQuizAnalytics(id, email);
+        QuizAnalytics analytics = quizService.getQuizAnalytics(quizId, email);
         return ResponseEntity.ok(analytics);
     }
 
-    @PostMapping("/{id}/submit")
-    public ResponseEntity<SubmissionResult> submitQuizz(@PathVariable Long id,
+    @PostMapping("/{quizId}/submit")
+    public ResponseEntity<SubmissionResult> submitQuizz(@PathVariable Long quizId,
                                                         @RequestBody @Valid QuizSubmissionDTO submission,
                                                         Authentication authentication){
         String userEmail = authentication != null ? authentication.getName() : null;
 
-        SubmissionResult result = quizService.submitQuiz(id, submission, userEmail);
+        SubmissionResult result = quizService.submitQuiz(quizId, submission, userEmail);
 
         return ResponseEntity.ok(result);
     }
 
+    @GetMapping("/responses/{responseId}")
+    public ResponseEntity<ResponseDTO> getResponseDetail(
+            @PathVariable Long responseId,
+            Authentication authentication) {
+        String userEmail = authentication.getName();
+        ResponseDTO dto = quizService.getResponseDetail(responseId, userEmail);
+        return ResponseEntity.ok(dto);
+    }
+
+    @GetMapping("/{quizId}/responses")
+    public ResponseEntity<List<ResponseSummaryDTO>> getResponses(@PathVariable Long quizId, Authentication authentication) {
+        String email = authentication.getName();
+        List<ResponseSummaryDTO> dto = quizService.getResponses(quizId, email);
+
+        return ResponseEntity.ok(dto);
+    }
+
+
+    //apis for unlisted urls (shared links) for guests to be able to take the quizzes
+    @GetMapping("/public/{shareToken}")
+    public ResponseEntity<Quiz> getSharedQuiz(@PathVariable String shareToken) {
+        Quiz quiz = quizService.getSharedQuiz(shareToken);
+        return ResponseEntity.ok(quiz);
+    }
+
+    @PostMapping("/{quizId}/share")
+    public ResponseEntity<Map<String, String>> createOrRefreshSharingToken(@PathVariable Long quizId, Authentication authentication){
+        String email = authentication.getName();
+        String token = quizService.createOrRefreshShareToken(quizId, email);
+        return ResponseEntity.ok(Map.of("shareToken", token));
+    }
+
+    @DeleteMapping("/{quizId}/share")
+    public ResponseEntity<Void> revokeSharingToken(@PathVariable Long quizId, Authentication authentication){
+        String email = authentication.getName();
+        quizService.revokeShareToken(quizId, email);
+        return ResponseEntity.noContent().build();
+    }
 
 }
 

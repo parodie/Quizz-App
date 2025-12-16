@@ -1,4 +1,4 @@
-import './FloatingShape.css';
+import '../styles/FloatingShape.css';
 
 export default function FloatingShape({ size, top, left, delay = 0 }) {
   return (

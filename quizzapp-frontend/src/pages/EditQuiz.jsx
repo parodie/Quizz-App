@@ -12,7 +12,7 @@ export default function EditQuiz() {
     useEffect(() => {
         const fetchQuiz = async () => {
             try {
-                const res = await api.get(`/quizzes/${id}`);
+                const res = await api.get(`/quizzes/my/${id}`);
                 setQuiz(res.data);
             } catch (err) {
                 console.error(err);

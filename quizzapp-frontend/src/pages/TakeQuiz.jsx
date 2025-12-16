@@ -16,7 +16,7 @@ export default function TakeQuiz() {
     useEffect(() => {
         const fetchQuiz = async () => {
             try {
-                const res = await api.get(`/quizzes/${id}`);
+                const res = await api.get(`/quizzes/my/${id}`);
                 setQuiz(res.data);
             } catch (err) {
                 alert('Quiz not found', err);
@@ -36,17 +36,34 @@ export default function TakeQuiz() {
         return () => clearInterval(interval);
     }, []);
 
-    const handleAnswer = (questionId, answer) => {
-        setAnswers(prev => ({ ...prev, [questionId]: answer }));
+    const handleAnswer = (questionId, option, isMultiple, isChecked) => {
+        setAnswers(prev => {
+            const current = prev[questionId] || [];
+            
+            let updated;
+            if (isMultiple) {
+                // Multiple choice: add/remove based on checked state
+                if (isChecked) {
+                    updated = [...current, option];
+                } else {
+                    updated = current.filter(ans => ans !== option);
+                }
+            } else {
+                // Single choice: always replace with new selection
+                updated = [option];
+            }
+            
+            return { ...prev, [questionId]: updated };
+        });
     };
 
     const handleSubmit = async () => {
         const submission = {
-            displayName: prompt('Enter your name:') || 'Anonymous',
+            displayName: prompt('Enter your name:') || 'Guest',
             timeTaken: timeElapsed,
             answers: quiz.questions.map(q => ({
                 questionId: q.id,
-                selectedAnswer: answers[q.id] || ''
+                selectedAnswers: answers[q.id] || []
             }))
         };
 
@@ -77,21 +94,25 @@ export default function TakeQuiz() {
                         <div key={q.id} className="question">
                             <h4 className="questionTitle">{i + 1}. {q.text}</h4>
                             <div className="options">
-                                {q.options.map((opt, idx) => (
-                                    <label key={idx} className="optionLabel">
-                                        <input
-                                            type="radio"
-                                            name={`question-${q.id}`}
-                                            value={opt}
-                                            checked={answers[q.id] === opt}
-                                            onChange={() => handleAnswer(q.id, opt)}
-                                            className="radioInput"
-                                        />
-                                        <span className="optionText">
-                                            {String.fromCharCode(65 + idx)}) {opt}
-                                        </span>
-                                    </label>
-                                ))}
+                                {q.options.map((opt, idx) => {
+                                    const isMultiple = q.question_type === 'multiple-choice';
+                                    const isSelected = answers[q.id]?.includes(opt);
+
+                                    return (
+                                        <label key={idx} className="optionLabel">
+                                            <input
+                                                type={isMultiple ? "checkbox" : "radio"}
+                                                name={isMultiple ? undefined : `question-${q.id}`}
+                                                checked={isSelected}
+                                                onChange={(e) => handleAnswer(q.id, opt, isMultiple, e.target.checked)}
+                                                className={isMultiple ? "checkboxInput" : "radioInput"}
+                                            />
+                                            <span className="optionText">
+                                                {String.fromCharCode(65 + idx)}) {opt}
+                                            </span>
+                                        </label>
+                                    );
+            })}
                             </div>
                         </div>
                     ))}
